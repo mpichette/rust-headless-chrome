@@ -63,6 +63,9 @@ pub struct LaunchOptions<'a> {
     /// Determintes whether to run headless version of the browser. Defaults to true.
     #[builder(default = "true")]
     headless: bool,
+        /// Proxy server option taking host:port argument. Defaults to None.
+    #[builder(default = "None")]
+    proxy_server: Option<&'a str>,
     /// Determines whether to run the browser with a sandbox.
     #[builder(default = "true")]
     sandbox: bool,
@@ -211,6 +214,12 @@ impl Process {
             String::from("")
         };
 
+        let proxy_server_option = if let Some(proxy) = launch_options.proxy_server {
+            format!("--proxy-server={}", proxy)
+        } else {
+            String::from("")
+        };
+
         // NOTE: picking random data dir so that each a new browser instance is launched
         // (see man google-chrome)
         let user_data_dir = ::tempfile::Builder::new()
@@ -241,6 +250,10 @@ impl Process {
             args.extend(&["--no-sandbox"]);
         }
 
+        if !proxy_server_option.is_empty() {
+            args.extend(&[proxy_server_option.as_str()]);
+        }
+        
         let extension_args: Vec<String> = launch_options
             .extensions
             .iter()
