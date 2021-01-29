@@ -31,6 +31,7 @@ pub enum RequestInterceptionDecision {
     Continue,
     // TODO: Error
     Response(String),
+    AuthResponse(String, String),
 }
 
 pub type RequestInterceptor = Box<
@@ -254,6 +255,22 @@ impl<'a> Tab {
                                     warn!("Tried to continue request after connection was closed");
                                 }
                             }
+                            RequestInterceptionDecision::AuthResponse(username, password) => {
+                                let method = network::methods::ContinueInterceptedRequest {
+                                    interception_id: &id,
+                                    auth_challenge_response: Some(network::methods::AuthChallengeResponse {
+                                        response: "ProvideCredentials",
+                                        username: Some(&username),
+                                        password: Some(&password),
+                                    }),
+                                    ..Default::default()
+                                };
+                                let result =
+                                    transport.call_method_on_target(session_id.clone(), method);
+                                if result.is_err() {
+                                    warn!("Tried to continue request after connection was closed");
+                                }
+                            }                            
                         }
                     }
                     Event::ResponseReceived(ev) => {
