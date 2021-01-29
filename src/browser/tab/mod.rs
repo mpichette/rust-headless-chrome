@@ -31,7 +31,7 @@ pub enum RequestInterceptionDecision {
     Continue,
     // TODO: Error
     Response(String),
-    AuthResponse(String, String),
+    AuthResponse(Option<String>, Option<String>),
 }
 
 pub type RequestInterceptor = Box<
@@ -256,13 +256,25 @@ impl<'a> Tab {
                                 }
                             }
                             RequestInterceptionDecision::AuthResponse(username, password) => {
+                                let resp = match username {
+                                        None =>  {
+                                            Some(network::methods::AuthChallengeResponse {
+                                                response: "CancelAuth",
+                                                username: None,
+                                                password: None,
+                                            })
+                                        },
+                                        Some(ref _u) => {
+                                            Some(network::methods::AuthChallengeResponse {
+                                                response: "ProvideCredentials",
+                                                username: username.as_deref(),
+                                                password: password.as_deref(),
+                                            })
+                                        }
+                                    };
                                 let method = network::methods::ContinueInterceptedRequest {
                                     interception_id: &id,
-                                    auth_challenge_response: Some(network::methods::AuthChallengeResponse {
-                                        response: "ProvideCredentials",
-                                        username: Some(&username),
-                                        password: Some(&password),
-                                    }),
+                                    auth_challenge_response: resp,
                                     ..Default::default()
                                 };
                                 let result =
